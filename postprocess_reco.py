@@ -17,11 +17,11 @@ s1 = time()
 print(f'My imports: {s1-s0:.2f} s')
 
 #Constants/variables
-#DATA_DIR  = '/exp/sbnd/data/users/brindenc/analyze_sbnd/numu/v09_78_04_wc_pandora'
-DATA_DIR = '/exp/sbnd/data/users/brindenc/ML/test_fcl/debug_trackid/v4'
+DATA_DIR  = '/exp/sbnd/data/users/brindenc/analyze_sbnd/numu/v09_78_04_wc_pandora'
+#DATA_DIR = '/exp/sbnd/data/users/brindenc/ML/test_fcl/debug_trackid/v4'
 #FNAME = 'single.df'
-#FNAME = 'all.df'
-FNAME = 'test.df'
+FNAME = 'all.df'
+#FNAME = 'test.df'
 NOM_POT = 0.6e20 # stats for first run
 ISMC = True #is this MC or data
 APPLY_CUTS = False #apply cuts to the data
@@ -45,10 +45,11 @@ pfp.data = slc.get_reference_df(pfp) #cut pfp to only those in slice
 
 #PFP processing
 pfp.fix_shw_energy(fill=np.nan,dummy=np.nan)
+pfp.add_pfp_semantics() #do this before cleaning
+#pfp.clean(dummy_vals=[-9999,-999,999,9999,-5])
 pfp.add_reco_containment()
 pfp.add_neutrino_dir()
 pfp.add_theta()
-pfp.add_pfp_semantics()
 pfp.add_bestpdg(method='x2')
 pfp.add_trk_bestenergy()
 pfp.add_Etheta()
@@ -57,6 +58,7 @@ s3 = time()
 print(f'pfp time: {s3-s2:.2f} s')
 
 #Slice processing
+#slc.clean(dummy_vals=[-9999,-999,999,9999,-5])
 slc.add_has_trk(pfp)
 slc.add_has_muon(pfp)
 slc.add_shws_trks(pfp)
@@ -64,8 +66,8 @@ slc.add_in_av()
 slc.add_event_type()
 slc.add_tot_visE()
 #Cuts
-slc.cut_fv(cut=APPLY_CUTS)
 slc.cut_cosmic(cut=APPLY_CUTS,fmatch_score=7,nu_score=0.4)
+slc.cut_fv(cut=APPLY_CUTS)
 slc.cut_trk(cut=APPLY_CUTS)
 slc.cut_muon(cut=APPLY_CUTS)
 if not APPLY_CUTS: slc.cut_all() #display if sample survives all cuts
