@@ -5,7 +5,7 @@ import uproot
 import matplotlib.pyplot as plt
 from time import time
 #My imports
-sys.path.append('/exp/sbnd/app/users/brindenc/mysbnana_v09_75_03/srcs/sbnana/sbnana/SBNAna/pyana')
+sys.path.append('/exp/sbnd/app/users/brindenc/analyze_sbnd/pyana')
 s0 = time()
 from sbnd.cafclasses.pfp import PFP
 from sbnd.cafclasses.slice import CAFSlice
@@ -44,13 +44,16 @@ slc.cut_has_nuscore(cut=True)
 pfp.data = slc.get_reference_df(pfp) #cut pfp to only those in slice
 
 #PFP processing
+pfp.clean(dummy_vals=[-9999,-999,999,9999,-5])
 pfp.fix_shw_energy(fill=np.nan,dummy=np.nan)
-pfp.add_pfp_semantics() #do this before cleaning
-#pfp.clean(dummy_vals=[-9999,-999,999,9999,-5])
-pfp.add_reco_containment()
+pfp.add_pfp_semantics(threshold=0.6) #from ROC studies
+pfp.add_containment()
 pfp.add_neutrino_dir()
 pfp.add_theta()
-pfp.add_bestpdg(method='x2')
+pfp.add_bestpdg(method='x2',length=32
+                ,chi2_muon=18
+                ,chi2_proton=87
+                ,chi2_proton2=97) #from ROC studies
 pfp.add_trk_bestenergy()
 pfp.add_Etheta()
 pfp.add_stats()
@@ -58,15 +61,17 @@ s3 = time()
 print(f'pfp time: {s3-s2:.2f} s')
 
 #Slice processing
-#slc.clean(dummy_vals=[-9999,-999,999,9999,-5])
+slc.clean(dummy_vals=[-9999,-999,999,9999,-5])
 slc.add_has_trk(pfp)
 slc.add_has_muon(pfp)
 slc.add_shws_trks(pfp)
+slc.add_pdg_counts(pfp)
 slc.add_in_av()
 slc.add_event_type()
 slc.add_tot_visE()
+slc.add_best_muon(pfp,method='energy')
 #Cuts
-slc.cut_cosmic(cut=APPLY_CUTS,fmatch_score=7,nu_score=0.4)
+slc.cut_cosmic(cut=APPLY_CUTS,fmatch_score=8,nu_score=0.5) #From ROC studies
 slc.cut_fv(cut=APPLY_CUTS)
 slc.cut_trk(cut=APPLY_CUTS)
 slc.cut_muon(cut=APPLY_CUTS)

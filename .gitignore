@@ -1,3 +1,4 @@
 *.csv 
 test*
 Plots
+nohup.out
