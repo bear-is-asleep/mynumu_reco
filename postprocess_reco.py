@@ -1,8 +1,6 @@
 import pandas as pd
 import sys
 import numpy as np
-import uproot
-import matplotlib.pyplot as plt
 from time import time
 #My imports
 sys.path.append('/exp/sbnd/app/users/brindenc/analyze_sbnd/pyana')
@@ -18,18 +16,18 @@ print(f'My imports: {s1-s0:.2f} s')
 
 #Constants/variables
 #DATA_DIR  = '/exp/sbnd/data/users/brindenc/analyze_sbnd/numu/v09_78_04_wc_pandora'
-#DATA_DIR = '/exp/sbnd/data/users/brindenc/analyze_sbnd/numu/v09_82_02_01_pds_gain'
+DATA_DIR = '/exp/sbnd/data/users/brindenc/analyze_sbnd/numu/v09_82_02_01_pds_gain'
 #DATA_DIR = '/exp/sbnd/data/users/brindenc/ML/test_fcl/debug_trackid/v4'
 #FNAME = 'single.df'
 #FNAME = 'all.df'
-#FNAME = 'nom.df'
+FNAME = 'nom.df'
 #FNAME = 'pmt20.df'
 #FNAME = 'pmt50.df'
 #FNAME = 'test.df'
 NOM_POT = 0.6e20 # stats for first run
 ISMC = True #is this MC or data
 APPLY_CUTS = False #apply cuts to the data
-CUT_MODE = 'moon' #which set of cuts to use (roc or moon)
+CUT_MODE = 'roc' #which set of cuts to use (roc or moon)
 
 pfp = PFP(pd.read_hdf(f'{DATA_DIR}/{FNAME}', key='pfp')
           ,pot=NOM_POT
@@ -90,12 +88,13 @@ print('WARNING: There\'s a lot of muons with no truth match. Not sure why yet')
 slc.add_best_muon(pfp,method='energy')
 #Cuts
 if CUT_MODE == 'roc':
-    slc.cut_cosmic(cut=APPLY_CUTS,fmatch_score=8,nu_score=0.5) #From ROC studies
+    slc.cut_cosmic(cut=APPLY_CUTS,fmatch_score=320,nu_score=0.5,use_opt0=True) #From ROC studies - use opt0 (updated from first talk)
 elif CUT_MODE == 'moon':
-    slc.cut_cosmic(cut=APPLY_CUTS,fmatch_score=7,nu_score=0.4) #From Moon studies
+    slc.cut_cosmic(cut=APPLY_CUTS,fmatch_score=7,nu_score=0.4,use_opt0=False) #From Moon studies
 slc.cut_fv(cut=APPLY_CUTS)
 slc.cut_trk(cut=APPLY_CUTS)
 slc.cut_muon(cut=APPLY_CUTS)
+slc.cut_is_cont(cut=APPLY_CUTS)
 if not APPLY_CUTS: slc.cut_all() #display if sample survives all cuts
 s4 = time()
 print(f'slice time: {s4-s3:.2f} s')
