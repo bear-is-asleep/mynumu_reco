@@ -9,7 +9,8 @@ from sbnd.cafclasses.pfp import PFP
 from sbnd.cafclasses.slice import CAFSlice
 from sbnd.constants import *
 from sbnd.numu.numu_constants import *
-from sbnd.prism import PRISM_BINS
+from sbnd.flux.prism import PRISM_BINS
+from sbnd.detector.definitions import *
 s1 = time()
 
 print(f'My imports: {s1-s0:.2f} s')
@@ -27,7 +28,11 @@ FNAME = 'nom.df'
 NOM_POT = 0.6e20 # stats for first run
 ISMC = True #is this MC or data
 APPLY_CUTS = False #apply cuts to the data
-CUT_MODE = 'roc' #which set of cuts to use (roc or moon)
+CUT_MODE = 'roc' #which set of cuts to use (roc, roc_cont, roc_nonuscore or moon)
+if 'roc' in CUT_MODE:
+    print('Using roc cuts')
+elif 'moon' in CUT_MODE:
+    print('Using moon cuts')
 
 pfp = PFP(pd.read_hdf(f'{DATA_DIR}/{FNAME}', key='pfp')
           ,pot=NOM_POT
@@ -42,24 +47,27 @@ s2 = time()
 print(f'Load df time: {s2-s1:.2f} s')
 
 #cut these by default since there was no reco attempt
-print('-cutting nu_score < 0')
-slc.cut_has_nuscore(cut=True) 
-pfp.data = slc.get_reference_df(pfp) #cut pfp to only those in slice
+#print('-cutting nu_score < 0')
+#slc.cut_has_nuscore(cut=True) 
+#pfp.data = slc.get_reference_df(pfp) #cut pfp to only those in slice
 
 #PFP processing
 pfp.clean(dummy_vals=[-9999,-999,999,9999,-5])
-pfp.fix_shw_energy(fill=np.nan,dummy=np.nan)
-if CUT_MODE == 'roc':
+#pfp.fix_shw_energy(fill=np.nan,dummy=np.nan)
+if 'roc' in CUT_MODE:
     pfp.add_pfp_semantics(threshold=0.6) #from ROC studies
 elif CUT_MODE == 'moon':
     pfp.add_pfp_semantics(threshold=0.5) #from Moon studies
 else:
     raise ValueError(f'Invalid CUT_MODE: "{CUT_MODE}"')
-    
-pfp.add_containment()
+
+if CUT_MODE == 'roc_cont':
+    pfp.add_containment(volume=CONT_VOL)
+else:
+    pfp.add_containment()
 pfp.add_neutrino_dir()
 pfp.add_theta()
-if CUT_MODE == 'roc':
+if 'roc' in CUT_MODE:
     pfp.add_bestpdg(method='x2',length=32
                     ,chi2_muon=18
                     ,chi2_proton=87
@@ -69,6 +77,8 @@ elif CUT_MODE == 'moon':
                     ,chi2_muon=30
                     ,chi2_proton=60
                     ,chi2_proton2=90) #from Moon studies
+else:
+    raise ValueError(f'Invalid CUT_MODE: "{CUT_MODE}"')
 pfp.add_trk_bestenergy()
 pfp.add_Etheta()
 pfp.add_stats()
@@ -87,10 +97,16 @@ slc.add_tot_visE()
 print('WARNING: There\'s a lot of muons with no truth match. Not sure why yet')
 slc.add_best_muon(pfp,method='energy')
 #Cuts
-if CUT_MODE == 'roc':
-    slc.cut_cosmic(cut=APPLY_CUTS,fmatch_score=320,nu_score=0.5,use_opt0=True) #From ROC studies - use opt0 (updated from first talk)
+if 'roc' in CUT_MODE:
+    if 'nonuscore' in CUT_MODE:
+        print('Using nonuscore cuts for cosmic cut')
+        slc.cut_cosmic(cut=APPLY_CUTS,fmatch_score=320,nu_score=None,use_opt0=True,use_isclearcosmic=False) #Set nu_score to None to ignore
+    else:
+        slc.cut_cosmic(cut=APPLY_CUTS,fmatch_score=320,nu_score=0.5,use_opt0=True) #From ROC studies - use opt0 (updated from first talk)
 elif CUT_MODE == 'moon':
     slc.cut_cosmic(cut=APPLY_CUTS,fmatch_score=7,nu_score=0.4,use_opt0=False) #From Moon studies
+else:
+    raise ValueError(f'Invalid CUT_MODE: "{CUT_MODE}"')
 slc.cut_fv(cut=APPLY_CUTS)
 slc.cut_trk(cut=APPLY_CUTS)
 slc.cut_muon(cut=APPLY_CUTS)
